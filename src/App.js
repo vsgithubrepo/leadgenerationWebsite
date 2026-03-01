@@ -158,7 +158,7 @@ boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.5)'
 },
 
 loginHeader: { marginBottom: 24 },
-logo: { height: 42, width: 'auto', marginBottom: 20, filter: 'brightness(0) invert(1)' }, // White Logo
+logo: { height: 64, width: 'auto', marginBottom: 20 }, // White Logo
 loginTitle: { fontSize: 26, fontWeight: 700, color: '#f8fafc', marginBottom: 8, letterSpacing: '-0.5px' },
 loginSub: { fontSize: 14, color: '#94a3b8', lineHeight: 1.5 },
 
