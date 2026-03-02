@@ -151,10 +151,6 @@ export default function LeadEngine({ Logo }) {
   const handleGenerate = async () => {
     if (!form.segments.length) return alert('Select at least one segment.');
     if (!form.regions.length)  return alert('Select at least one region.');
-    if (APOLLO_API_KEY === 'YOUR_APOLLO_API_KEY_HERE') {
-      return alert('⚠️ Please add your Apollo API key to the .env file as REACT_APP_APOLLO_API_KEY');
-    }
-
     setGenerating(true);
     setProgress(0);
     setApiError('');
@@ -280,13 +276,6 @@ export default function LeadEngine({ Logo }) {
               <h1 style={S.pageTitle}>Generate Leads</h1>
               <p style={S.pageSubtitle}>Live data powered by Apollo.io — real companies, real contacts</p>
             </div>
-
-            {/* API Key Warning */}
-            {APOLLO_API_KEY === 'YOUR_APOLLO_API_KEY_HERE' && (
-              <div style={S.warningBanner}>
-                ⚠️ <strong>Apollo API key not set.</strong> Add <code>REACT_APP_APOLLO_API_KEY=your_key</code> to your <code>.env</code> file and restart the app.
-              </div>
-            )}
 
             {apiError && (
               <div style={{ ...S.warningBanner, borderColor: '#ef4444', background: 'rgba(239,68,68,0.08)', color: '#ef4444' }}>
