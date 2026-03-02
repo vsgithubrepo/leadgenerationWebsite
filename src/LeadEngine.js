@@ -9,81 +9,108 @@ const SEGMENTS = [
   { id: 'fleet', label: 'Truck Fleet Owners',           icon: '🚛' },
 ];
 const CITIES = ['All India','Mumbai','Delhi / NCR','Bengaluru','Chennai','Hyderabad','Pune','Ahmedabad','Kolkata','Surat','Jaipur','Kochi','Nagpur'];
-const SOURCES = [
-  { id: 'justdial',  label: 'JustDial',  icon: '📖' },
-  { id: 'indiamart', label: 'IndiaMart', icon: '🏭' },
-  { id: 'linkedin',  label: 'LinkedIn',  icon: '🔗' },
-  { id: 'apollo',    label: 'Apollo.io', icon: '🚀' },
-];
-const COMPANY_PARTS = {
-  '3PL / Freight Forwarders':   { p: ['Trans','Cargo','Swift','Express','Premier','Global','Blue','Star','Ace','Metro','Fast','Elite','Dynamic','Omni','Allied'], s: ['Logistics','Freight','Cargo','Courier','Transport','Carriers','Shipping','Express','Supply Chain'] },
-  'Manufacturing & Industrial': { p: ['Bharat','India','Modern','Apex','Supreme','Universal','Pioneer','Premier','Quality','Precision','Advanced','Tech'], s: ['Industries','Manufacturing','Products','Enterprises','Works','Engineering','Components','Systems'] },
-  'Importers / Exporters':      { p: ['Global','International','Overseas','Export','Trade','Pacific','Indo','Hindustan','United','Allied','Continental'], s: ['Traders','Exports','Imports','Trading Co','International','Overseas','Commercial','Trade Links'] },
-  'Truck Fleet Owners':         { p: ['Shree','Sri','Vijay','Jai','Nav','Pawan','Laxmi','Ganesh','Balaji','Sai','Durga'], s: ['Transport','Roadways','Carriers','Trucking','Logistics','Fleet','Goods Transport'] },
+
+// Segment → Apollo job titles & search keywords
+const SEGMENT_CONFIG = {
+  '3pl':   { titles: ['Director of Logistics','Head of Operations','Supply Chain Manager','Logistics Manager','Operations Manager','Branch Head'], keywords: 'logistics freight forwarding supply chain 3PL warehousing' },
+  'mfg':   { titles: ['Plant Manager','VP Operations','Director of Procurement','Supply Chain Head','GM Logistics'], keywords: 'manufacturing industrial engineering production procurement' },
+  'ie':    { titles: ['Export Manager','Import Head','Director of Trade','GM Exports','MD','International Trade Manager'], keywords: 'import export trade international wholesale distribution' },
+  'fleet': { titles: ['Fleet Manager','Transport Manager','Owner','MD','Operations Head','Fleet Owner'], keywords: 'trucking fleet transport roadways goods carrier' },
 };
-const NAMES = ['Rajesh Kumar','Amit Sharma','Priya Singh','Vikram Patel','Suresh Reddy','Anita Gupta','Rohit Mehta','Deepak Joshi','Kavita Nair','Sanjay Iyer','Meena Pillai','Harish Rao','Arun Mishra','Sunita Desai','Ravi Chauhan','Neha Agarwal','Manoj Tiwari','Swati Shah','Nitin Jain','Ganesh More'];
-const DESIGS = { '3PL / Freight Forwarders': ['Director – Operations','Head of Logistics','GM – Supply Chain','Operations Manager','Branch Head'], 'Manufacturing & Industrial': ['Supply Chain Head','GM – Logistics','Director – Procurement','VP Operations','Plant Manager'], 'Importers / Exporters': ['Export Manager','Import Head','Director – Trade','GM – Exports','MD'], 'Truck Fleet Owners': ['Fleet Owner','MD & Proprietor','Transport Manager','Owner Director','GM'] };
-const HIRING = ['Logistics Coordinator','Fleet Manager','Supply Chain Manager','Dispatch Manager','Warehouse Manager','Import Export Manager','Freight Coordinator'];
-const CITIES_AREAS = { 'Mumbai':['Andheri','Bandra','Navi Mumbai','Thane','Kurla'], 'Delhi / NCR':['Connaught Place','Noida','Gurgaon','Rohini','Dwarka'], 'Bengaluru':['Whitefield','Koramangala','Hebbal','Electronic City','Yeshwantpur'], 'Chennai':['Anna Nagar','T Nagar','Ambattur','Guindy','Porur'], 'Hyderabad':['Secunderabad','Begumpet','Kukatpally','Gachibowli','Uppal'], 'Pune':['Hinjewadi','Pimpri','Kharadi','Hadapsar','Baner'], 'Ahmedabad':['Navrangpura','Vatva','Naroda','Odhav','Maninagar'], 'Kolkata':['Salt Lake','Park Street','Howrah','Dum Dum','Rajarhat'], 'Surat':['Surat City','Ring Road','Varachha','Althan','Dumas'], 'Jaipur':['Malviya Nagar','Vaishali','Sitapura','Tonk Road','MI Road'], 'Kochi':['Ernakulam','Kakkanad','Edapally','Aluva','Vyttila'], 'Nagpur':['Sitabuldi','Dharampeth','Hingna','Butibori','Kalmna'] };
 
-// ── Helpers ───────────────────────────────────────────────────────
-const rnd = arr => arr[Math.floor(Math.random() * arr.length)];
-const rndInt = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
+// City name → Apollo location string
+const CITY_MAP = {
+  'Mumbai': 'Mumbai, Maharashtra, India', 'Delhi / NCR': 'New Delhi, Delhi, India',
+  'Bengaluru': 'Bengaluru, Karnataka, India', 'Chennai': 'Chennai, Tamil Nadu, India',
+  'Hyderabad': 'Hyderabad, Telangana, India', 'Pune': 'Pune, Maharashtra, India',
+  'Ahmedabad': 'Ahmedabad, Gujarat, India', 'Kolkata': 'Kolkata, West Bengal, India',
+  'Surat': 'Surat, Gujarat, India', 'Jaipur': 'Jaipur, Rajasthan, India',
+  'Kochi': 'Kochi, Kerala, India', 'Nagpur': 'Nagpur, Maharashtra, India',
+};
 
-function generateLeads(config) {
-  const { segments, regions, sources, maxLeads } = config;
-  const leads = [], seen = new Set();
-  const cityList = regions.includes('All India') ? Object.keys(CITIES_AREAS) : regions;
-  const segLabels = segments.map(id => SEGMENTS.find(s => s.id === id)?.label).filter(Boolean);
-  const perSeg = Math.ceil(maxLeads / Math.max(segLabels.length, 1));
-  for (const seg of segLabels) {
-    const parts = COMPANY_PARTS[seg];
-    for (let i = 0; i < perSeg && leads.length < maxLeads; i++) {
-      let company = `${rnd(parts.p)} ${rnd(parts.s)}`;
-      for (let t = 0; t < 5 && seen.has(company); t++) company = `${rnd(parts.p)} ${rnd(parts.s)}`;
-      seen.add(company);
-      const city = rnd(cityList), areas = CITIES_AREAS[city] || [city];
-      const slug = company.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 14);
-      const contact = rnd(NAMES), desig = rnd(DESIGS[seg]);
-      const hasEmail = Math.random() > 0.22, hasPhone = Math.random() > 0.08;
-      const hasLinkedIn = Math.random() > 0.45, hasHiring = Math.random() > 0.50;
-      const score = Math.min(100,
-        5 + (hasEmail?20:0) + (hasPhone?15:0) + (hasLinkedIn?12:0) + (hasHiring?18:0) +
-        ({'3PL / Freight Forwarders':25,'Importers / Exporters':22,'Manufacturing & Industrial':20,'Truck Fleet Owners':18}[seg])
-      );
-      leads.push({
-        id: `${Date.now()}_${leads.length}`, score,
-        grade: score>=85?'A+':score>=70?'A':score>=55?'B+':score>=45?'B':score>=30?'C':'D',
-        company, segment: seg, city, address: `${rnd(areas)}, ${city}`,
-        contact, designation: desig,
-        email: hasEmail?`${contact.split(' ')[0].toLowerCase()}@${slug}.com`:'',
-        phone: hasPhone?`+91 ${rndInt(70,99)}${rndInt(10000000,99999999)}`:'',
-        linkedin: hasLinkedIn?`https://linkedin.com/company/${slug}`:'',
-        website: Math.random()>0.25?`https://www.${slug}.com`:'',
-        hiring: hasHiring?rnd(HIRING):'',
-        source: rnd(sources.length?sources.map(id=>SOURCES.find(s=>s.id===id)?.label).filter(Boolean):['JustDial']),
-        date: new Date().toLocaleString('en-IN'), status: 'New', notes: '',
-      });
-    }
+// ── Apollo API via secure backend proxy ─────────────────────────
+// Calls /api/apollo (our Vercel function) — API key stays on server, never in browser
+async function callApollo(endpoint, params) {
+  const res = await fetch('/api/apollo', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ endpoint, ...params }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Apollo API error ' + res.status);
   }
-  return leads.sort((a, b) => b.score - a.score);
+  return res.json();
+}
+
+async function searchSegment({ segmentId, regions, perPage }) {
+  const config   = SEGMENT_CONFIG[segmentId];
+  if (!config) return [];
+  const cityList = regions.includes('All India') ? Object.values(CITY_MAP) : regions.map(r => CITY_MAP[r]).filter(Boolean);
+  const data     = await callApollo('people_search', {
+    per_page: Math.min(perPage, 100), page: 1,
+    person_titles: config.titles, person_locations: cityList,
+    q_keywords: config.keywords,
+    contact_email_status: ['verified', 'likely to engage', 'guessed'],
+  });
+  return data.people || [];
+}
+
+function mapToLead(person, segmentId) {
+  const org        = person.organization || {};
+  const hasEmail   = !!person.email;
+  const hasPhone   = !!(person.phone_numbers?.length);
+  const hasLinkedIn= !!person.linkedin_url;
+  const hasHiring  = !!(org.job_postings?.length);
+  const score      = Math.min(100, 5 + (hasEmail?20:0) + (hasPhone?15:0) + (hasLinkedIn?12:0) + (hasHiring?18:0) + ({'3pl':25,'ie':22,'mfg':20,'fleet':18}[segmentId]||15));
+  return {
+    id: person.id || `lead_${Date.now()}_${Math.random()}`, score,
+    grade: score>=85?'A+':score>=70?'A':score>=55?'B+':score>=45?'B':score>=30?'C':'D',
+    company: org.name||'—', segment: SEGMENTS.find(s=>s.id===segmentId)?.label||segmentId,
+    city: person.city||org.city||'—', address: [person.city,person.state,'India'].filter(Boolean).join(', '),
+    contact: [person.first_name,person.last_name].filter(Boolean).join(' ')||'—',
+    designation: person.title||'—', email: person.email||'',
+    phone: person.phone_numbers?.[0]?.sanitized_number||'',
+    linkedin: person.linkedin_url||'', website: org.website_url||'',
+    hiring: hasHiring?(org.job_postings?.[0]?.title||''):'',
+    industry: org.industry||'', employees: org.estimated_num_employees||'',
+    source: 'Apollo.io', date: new Date().toLocaleString('en-IN'), status: 'New', notes: '',
+  };
+}
+
+async function generateLeads(config, onProgress) {
+  const { segments, regions, maxLeads } = config;
+  const perSegment = Math.ceil(maxLeads / Math.max(segments.length, 1));
+  const allLeads   = [];
+  for (let i = 0; i < segments.length; i++) {
+    const segId = segments[i];
+    onProgress(Math.round(10 + (i/segments.length)*75), `🔍 Searching Apollo for ${SEGMENTS.find(s=>s.id===segId)?.label}...`);
+    try {
+      const people = await searchSegment({ segmentId: segId, regions, perPage: perSegment });
+      onProgress(Math.round(10 + ((i+0.6)/segments.length)*75), `✅ Found ${people.length} contacts`);
+      for (const p of people) allLeads.push(mapToLead(p, segId));
+    } catch(err) { console.error(`Segment ${segId} failed:`, err); }
+  }
+  onProgress(90, '🧹 Deduplicating & scoring...');
+  const seen = new Set();
+  const deduped = allLeads.filter(l => { const k=`${l.company}_${l.contact}`.toLowerCase(); if(seen.has(k))return false; seen.add(k); return true; });
+  onProgress(100, '✅ Export ready!');
+  return deduped.sort((a,b)=>b.score-a.score).slice(0,maxLeads);
 }
 
 function exportCSV(leads, filename) {
-  const H = ['Score','Grade','Company','Segment','City','Contact','Designation','Email','Phone','LinkedIn','Website','Address','Hiring Signal','Source','Date','Status','Notes'];
-  const rows = leads.map(l => [l.score,l.grade,l.company,l.segment,l.city,l.contact,l.designation,l.email,l.phone,l.linkedin,l.website,l.address,l.hiring,l.source,l.date,l.status,l.notes]);
+  const H = ['Score','Grade','Company','Segment','City','Contact','Designation','Email','Phone','LinkedIn','Website','Address','Industry','Employees','Hiring Signal','Source','Date','Status','Notes'];
+  const rows = leads.map(l=>[l.score,l.grade,l.company,l.segment,l.city,l.contact,l.designation,l.email,l.phone,l.linkedin,l.website,l.address,l.industry,l.employees,l.hiring,l.source,l.date,l.status,l.notes]);
   const csv = [H,...rows].map(r=>r.map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
-  a.download = filename || 'leads.csv'; a.click();
+  a.download = filename||'leads.csv'; a.click();
 }
 
 const scoreColor = s => s>=70?'#22c55e':s>=45?'#f59e0b':'#ef4444';
 const scoreBg    = s => s>=70?'rgba(34,197,94,.12)':s>=45?'rgba(245,158,11,.12)':'rgba(239,68,68,.12)';
-
 // ── Main Component ────────────────────────────────────────────────
 export default function LeadEngine({ Logo }) {
-  // Fallback Logo if not passed from App.js
   if (!Logo) Logo = ({ height=44, style={} }) => (
     <img src="/etechcube-logo.jpg" alt="eTechCube"
       style={{ height, width:'auto', objectFit:'contain', display:'block', ...style }} />
@@ -91,7 +118,7 @@ export default function LeadEngine({ Logo }) {
   const { user } = useUser();
   const { signOut } = useClerk();
   const [view, setView] = useState('generate');
-  const [form, setForm] = useState({ description:'', segments:['3pl','mfg','ie','fleet'], regions:['All India'], sources:['justdial','indiamart','linkedin'], maxLeads:100, instructions:'' });
+  const [form, setForm] = useState({ description:'', segments:['3pl','mfg','ie','fleet'], regions:['All India'], sources:['apollo'], maxLeads:100, instructions:'' });
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [progressLabel, setProgressLabel] = useState('');
@@ -104,8 +131,8 @@ export default function LeadEngine({ Logo }) {
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('score');
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [apiError, setApiError] = useState('');
 
-  // Load history
   useEffect(() => {
     (async () => {
       try {
@@ -124,32 +151,58 @@ export default function LeadEngine({ Logo }) {
   const handleGenerate = async () => {
     if (!form.segments.length) return alert('Select at least one segment.');
     if (!form.regions.length)  return alert('Select at least one region.');
-    setGenerating(true); setProgress(0); setView('generate');
-    const steps = [[12,'🔍 Scanning JustDial listings...'],[28,'🏭 Crawling IndiaMart directory...'],[46,'🔗 Extracting LinkedIn pages...'],[60,'🚀 Querying Apollo.io...'],[74,'📧 Verifying emails...'],[85,'📞 Validating phones...'],[94,'🧹 Deduplicating & scoring...'],[100,'✅ Export ready!']];
-    for (const [p, label] of steps) {
-      await new Promise(r => setTimeout(r, rndInt(250, 600)));
-      setProgress(p); setProgressLabel(label);
+    if (APOLLO_API_KEY === 'YOUR_APOLLO_API_KEY_HERE') {
+      return alert('⚠️ Please add your Apollo API key to the .env file as REACT_APP_APOLLO_API_KEY');
     }
-    const leads = generateLeads(form);
-    const meta = {
-      id: `run_${Date.now()}`,
-      date: new Date().toLocaleString('en-IN'),
-      by: user?.firstName || user?.primaryEmailAddress?.emailAddress || 'User',
-      description: form.description || '(No description)',
-      segments: form.segments.map(id=>SEGMENTS.find(s=>s.id===id)?.label).filter(Boolean),
-      regions: form.regions,
-      total: leads.length,
-      hot: leads.filter(l=>l.score>=70).length,
-      warm: leads.filter(l=>l.score>=45&&l.score<70).length,
-      cold: leads.filter(l=>l.score<45).length,
-      withEmail: leads.filter(l=>l.email).length,
-      withPhone: leads.filter(l=>l.phone).length,
-      leads,
+
+    setGenerating(true);
+    setProgress(0);
+    setApiError('');
+    setView('generate');
+
+    const onProgress = (pct, label) => {
+      setProgress(pct);
+      setProgressLabel(label);
     };
-    const newHistory = [meta, ...history].slice(0, 100);
-    setHistory(newHistory); await saveHistory(newHistory);
-    setCurrentLeads(leads); setCurrentMeta(meta);
-    setGenerating(false); setView('results');
+
+    try {
+      onProgress(5, '🚀 Connecting to Apollo.io...');
+      const leads = await generateLeads(form, onProgress);
+
+      if (leads.length === 0) {
+        setApiError('No leads returned from Apollo. Try broadening your search (more segments, All India, etc.)');
+        setGenerating(false);
+        return;
+      }
+
+      const meta = {
+        id: `run_${Date.now()}`,
+        date: new Date().toLocaleString('en-IN'),
+        by: user?.firstName || user?.primaryEmailAddress?.emailAddress || 'User',
+        description: form.description || '(No description)',
+        segments: form.segments.map(id=>SEGMENTS.find(s=>s.id===id)?.label).filter(Boolean),
+        regions: form.regions,
+        total: leads.length,
+        hot: leads.filter(l=>l.score>=70).length,
+        warm: leads.filter(l=>l.score>=45&&l.score<70).length,
+        cold: leads.filter(l=>l.score<45).length,
+        withEmail: leads.filter(l=>l.email).length,
+        withPhone: leads.filter(l=>l.phone).length,
+        leads,
+      };
+
+      const newHistory = [meta, ...history].slice(0, 100);
+      setHistory(newHistory);
+      await saveHistory(newHistory);
+      setCurrentLeads(leads);
+      setCurrentMeta(meta);
+      setGenerating(false);
+      setView('results');
+    } catch (err) {
+      console.error(err);
+      setApiError(`Error: ${err.message}`);
+      setGenerating(false);
+    }
   };
 
   const displayLeads = (() => {
@@ -164,7 +217,6 @@ export default function LeadEngine({ Logo }) {
   const activeMeta = historyDetail || currentMeta;
   const totalAllTime = history.reduce((s,r)=>s+r.total, 0);
 
-  // ── Render ──────────────────────────────────────────────────────
   return (
     <div style={S.root}>
       <style>{globalCss}</style>
@@ -204,7 +256,6 @@ export default function LeadEngine({ Logo }) {
           </div>
         )}
 
-        {/* User */}
         <div style={S.sidebarUser}>
           {user?.imageUrl && <img src={user.imageUrl} alt="" style={S.avatar} />}
           {sidebarOpen && (
@@ -227,12 +278,25 @@ export default function LeadEngine({ Logo }) {
           <div style={S.page}>
             <div style={S.pageHeader}>
               <h1 style={S.pageTitle}>Generate Leads</h1>
-              <p style={S.pageSubtitle}>Describe your target prospect and configure the search below</p>
+              <p style={S.pageSubtitle}>Live data powered by Apollo.io — real companies, real contacts</p>
             </div>
+
+            {/* API Key Warning */}
+            {APOLLO_API_KEY === 'YOUR_APOLLO_API_KEY_HERE' && (
+              <div style={S.warningBanner}>
+                ⚠️ <strong>Apollo API key not set.</strong> Add <code>REACT_APP_APOLLO_API_KEY=your_key</code> to your <code>.env</code> file and restart the app.
+              </div>
+            )}
+
+            {apiError && (
+              <div style={{ ...S.warningBanner, borderColor: '#ef4444', background: 'rgba(239,68,68,0.08)', color: '#ef4444' }}>
+                ❌ {apiError}
+              </div>
+            )}
 
             <FormSection title="Describe Your Ideal Prospect" hint="Plain English — industry focus, company size, pain points, anything specific">
               <textarea rows={4} value={form.description} onChange={e=>setForm(f=>({...f,description:e.target.value}))}
-                placeholder="e.g. Mid-size freight forwarders in Mumbai with 50+ employees still using Excel for shipment tracking. Looking for companies that recently expanded or are hiring logistics staff..."
+                placeholder="e.g. Mid-size freight forwarders in Mumbai with 50+ employees still using Excel for shipment tracking..."
                 style={S.textarea} />
             </FormSection>
 
@@ -248,15 +312,15 @@ export default function LeadEngine({ Logo }) {
                   })}
                 </div>
               </FormSection>
-              <FormSection title="Data Sources" hint="Which platforms to scrape">
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-                  {SOURCES.map(s=>{
-                    const active = form.sources.includes(s.id);
-                    return <button key={s.id} onClick={()=>setForm(f=>({...f,sources:toggle(f.sources,s.id)}))}
-                      style={{ ...S.toggleBtn, ...(active?S.toggleBtnActive:{}), flexDirection:'column', padding:'14px 10px', gap:6, fontSize:12 }}>
-                      <span style={{fontSize:20}}>{s.icon}</span> {s.label}
-                    </button>;
-                  })}
+              <FormSection title="Data Source" hint="Live Apollo.io database">
+                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                  <div style={{ ...S.toggleBtn, ...S.toggleBtnActive }}>
+                    <span>🚀</span> Apollo.io (Live)
+                    <span style={{ marginLeft:'auto', fontSize:10, color:'#6b7280', background:'rgba(34,197,94,0.1)', color:'#22c55e', padding:'2px 7px', borderRadius:4 }}>CONNECTED</span>
+                  </div>
+                  <div style={{ fontSize:12, color:'#6b7280', padding:'8px 12px', background:'rgba(255,255,255,0.02)', borderRadius:8, lineHeight:1.6 }}>
+                    ℹ️ Apollo search is free. Email/phone reveal uses credits (1 credit per contact).
+                  </div>
                 </div>
               </FormSection>
             </div>
@@ -272,20 +336,20 @@ export default function LeadEngine({ Logo }) {
             </FormSection>
 
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
-              <FormSection title="Lead Count" hint="How many leads to generate">
+              <FormSection title="Lead Count" hint="How many leads to fetch from Apollo">
                 <select value={form.maxLeads} onChange={e=>setForm(f=>({...f,maxLeads:Number(e.target.value)}))} style={S.select}>
-                  {[50,100,200,500,1000].map(n=><option key={n} value={n}>{n.toLocaleString()} leads</option>)}
+                  {[25,50,100,200,500].map(n=><option key={n} value={n}>{n.toLocaleString()} leads</option>)}
                 </select>
               </FormSection>
               <FormSection title="Special Instructions" hint="Additional filters or focus areas">
                 <textarea rows={3} value={form.instructions} onChange={e=>setForm(f=>({...f,instructions:e.target.value}))}
-                  placeholder="e.g. Only 100+ employee companies, exclude IT sector, focus on port cities..."
+                  placeholder="e.g. Only 100+ employee companies, exclude IT sector..."
                   style={{ ...S.textarea, minHeight:80, fontSize:13 }} />
               </FormSection>
             </div>
 
             <button onClick={handleGenerate} style={S.generateBtn}>
-              ⚡ GENERATE {form.maxLeads.toLocaleString()} LEADS
+              ⚡ FETCH {form.maxLeads.toLocaleString()} REAL LEADS FROM APOLLO
             </button>
           </div>
         )}
@@ -294,8 +358,8 @@ export default function LeadEngine({ Logo }) {
         {view==='generate' && generating && (
           <div style={S.progressPage}>
             <div style={S.progressInner}>
-              <div style={S.progressTitle}>Hunting Leads...</div>
-              <div style={S.progressSub}>Scraping {form.sources.length} sources across {form.regions.slice(0,3).join(', ')}{form.regions.length>3?` +${form.regions.length-3} more`:''}</div>
+              <div style={S.progressTitle}>Fetching Real Leads...</div>
+              <div style={S.progressSub}>Querying Apollo.io live database across {form.regions.slice(0,3).join(', ')}{form.regions.length>3?` +${form.regions.length-3} more`:''}</div>
               <div style={S.progressBarWrap}>
                 <div style={{ ...S.progressBar, width:`${progress}%` }} />
               </div>
@@ -320,7 +384,7 @@ export default function LeadEngine({ Logo }) {
             )}
             <div style={S.resultsHeader}>
               <div>
-                <h1 style={S.pageTitle}>{activeMeta.total.toLocaleString()} Leads Found</h1>
+                <h1 style={S.pageTitle}>{activeMeta.total.toLocaleString()} Real Leads Found</h1>
                 <p style={S.pageSubtitle}>{activeMeta.date} · by {activeMeta.by} · {activeMeta.description.slice(0,70)}{activeMeta.description.length>70?'…':''}</p>
               </div>
               <div style={{ display:'flex', gap:10 }}>
@@ -329,7 +393,6 @@ export default function LeadEngine({ Logo }) {
               </div>
             </div>
 
-            {/* Stats */}
             <div style={S.statsRow}>
               {[
                 {label:'🔥 Hot (A/A+)',val:activeMeta.hot,c:'#22c55e'},
@@ -345,7 +408,6 @@ export default function LeadEngine({ Logo }) {
               ))}
             </div>
 
-            {/* Filters */}
             <div style={S.filters}>
               <input value={search} onChange={e=>setSearch(e.target.value)}
                 placeholder="🔍 Search company, contact, city..."
@@ -369,13 +431,12 @@ export default function LeadEngine({ Logo }) {
               <span style={{ marginLeft:'auto', color:'#6b7280', fontSize:12 }}>{displayLeads.length} leads</span>
             </div>
 
-            {/* Table */}
             <div style={S.tableWrap}>
               <div style={{ overflowX:'auto' }}>
                 <table style={S.table}>
                   <thead>
                     <tr style={S.thead}>
-                      {['Score','Company','City','Contact','Email','Phone','Segment','Hiring','Source'].map(h=>(
+                      {['Score','Company','Industry','City','Contact','Email','Phone','Segment','Hiring','Source'].map(h=>(
                         <th key={h} style={S.th}>{h}</th>
                       ))}
                     </tr>
@@ -390,11 +451,16 @@ export default function LeadEngine({ Logo }) {
                         <td style={{ ...S.td, maxWidth:190 }}>
                           <div style={S.companyName}>{l.company}</div>
                           {l.website && <a href={l.website} target="_blank" rel="noreferrer" style={S.link}>🌐 website</a>}
+                          {l.employees && <div style={{ color:'#6b7280', fontSize:11 }}>👥 {l.employees} emp</div>}
+                        </td>
+                        <td style={{ ...S.td, maxWidth:130, color:'#9ca3af', fontSize:11 }}>
+                          <div style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{l.industry || '—'}</div>
                         </td>
                         <td style={{ ...S.td, whiteSpace:'nowrap', color:'#9ca3af' }}>{l.city}</td>
                         <td style={{ ...S.td, maxWidth:150 }}>
                           <div style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontSize:12 }}>{l.contact||'—'}</div>
                           {l.designation && <div style={{ color:'#6b7280', fontSize:11, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{l.designation}</div>}
+                          {l.linkedin && <a href={l.linkedin} target="_blank" rel="noreferrer" style={{ ...S.link, color:'#3b82f6' }}>🔗 LinkedIn</a>}
                         </td>
                         <td style={{ ...S.td, maxWidth:180 }}>
                           {l.email?<a href={`mailto:${l.email}`} style={{ ...S.link, color:'#f59e0b', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', display:'block' }}>{l.email}</a>:<span style={{ color:'#4b5563', fontSize:12 }}>—</span>}
@@ -417,7 +483,6 @@ export default function LeadEngine({ Logo }) {
           </div>
         )}
 
-        {/* ── EMPTY RESULTS ───────────────────────────────── */}
         {view==='results' && !activeMeta && (
           <div style={S.emptyState}>
             <div style={S.emptyIcon}>📋</div>
@@ -507,14 +572,11 @@ function MiniStat({ label, val }) {
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────
 const S = {
   root:         { display:'flex', minHeight:'100vh', width:'100%', background:'#0a0c0f', fontFamily:"'DM Sans',sans-serif", color:'#e8e4dc', overflowX:'hidden' },
   sidebar:      { background:'#0d1117', borderRight:'1px solid rgba(255,255,255,0.06)', display:'flex', flexDirection:'column', position:'fixed', top:0, left:0, bottom:0, zIndex:100, overflow:'hidden' },
   sidebarTop:   { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'24px 16px 20px', borderBottom:'1px solid rgba(255,255,255,0.06)', minHeight:80 },
   brand:        { flex:1 },
-  brandName:    { fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:17, color:'#f59e0b', letterSpacing:'-0.5px', lineHeight:1.1 },
-  brandSub:     { fontSize:9, color:'#4b5563', textTransform:'uppercase', letterSpacing:'0.1em', marginTop:4 },
   collapseBtn:  { background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)', color:'#6b7280', borderRadius:6, width:28, height:28, fontSize:10, cursor:'pointer', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' },
   nav:          { padding:'16px 10px', flex:1 },
   navBtn:       { display:'flex', alignItems:'center', gap:10, width:'100%', padding:'10px 10px', borderRadius:8, border:'none', background:'transparent', color:'#9ca3af', fontSize:13, marginBottom:2, cursor:'pointer', textAlign:'left', transition:'all 0.15s', whiteSpace:'nowrap' },
@@ -584,6 +646,7 @@ const S = {
   historyTag:   { fontSize:11, padding:'2px 8px', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:4, color:'#9ca3af' },
   historyRegionTag:{ fontSize:11, padding:'2px 8px', background:'rgba(245,158,11,0.07)', border:'1px solid rgba(245,158,11,0.18)', borderRadius:4, color:'#f59e0b' },
   downloadBtn:  { padding:'6px 14px', borderRadius:6, border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.04)', color:'#9ca3af', fontSize:12, cursor:'pointer' },
+  warningBanner:{ background:'rgba(245,158,11,0.08)', border:'1px solid rgba(245,158,11,0.25)', borderRadius:10, padding:'12px 16px', marginBottom:24, color:'#f59e0b', fontSize:13, lineHeight:1.6 },
 };
 
 const globalCss = `
