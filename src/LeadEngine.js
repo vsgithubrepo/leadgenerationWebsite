@@ -308,7 +308,7 @@ export default function LeadEngine({ Logo }) {
                 <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                   <div style={{ ...S.toggleBtn, ...S.toggleBtnActive }}>
                     <span>🚀</span> Apollo.io (Live)
-                    <span style={{ marginLeft:'auto', fontSize:10, color:'#6b7280', background:'rgba(34,197,94,0.1)', color:'#22c55e', padding:'2px 7px', borderRadius:4 }}>CONNECTED</span>
+                    <span style={{ marginLeft:'auto', fontSize:10, background:'rgba(34,197,94,0.1)', color:'#22c55e', padding:'2px 7px', borderRadius:4 }}>CONNECTED</span>
                   </div>
                   <div style={{ fontSize:12, color:'#6b7280', padding:'8px 12px', background:'rgba(255,255,255,0.02)', borderRadius:8, lineHeight:1.6 }}>
                     ℹ️ Apollo search is free. Email/phone reveal uses credits (1 credit per contact).
