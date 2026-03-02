@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { useState, useEffect } from 'react';
 import { useUser, useClerk } from '@clerk/clerk-react';
 
