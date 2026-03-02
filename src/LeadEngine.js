@@ -1,4 +1,3 @@
-/* eslint-disable */
 import { useState, useEffect } from 'react';
 import { useUser, useClerk } from '@clerk/clerk-react';
 
@@ -49,10 +48,12 @@ async function searchSegment({ segmentId, regions, perPage }) {
   if (!config) return [];
   const cityList = regions.includes('All India') ? Object.values(CITY_MAP) : regions.map(r => CITY_MAP[r]).filter(Boolean);
   const data     = await callApollo('people_search', {
-    per_page: Math.min(perPage, 100), page: 1,
-    person_titles: config.titles, person_locations: cityList,
-    q_keywords: config.keywords,
-    contact_email_status: ['verified', 'likely to engage', 'guessed'],
+    per_page: Math.min(perPage, 100),
+    page: 1,
+    person_titles: config.titles,
+    person_locations: cityList,
+    organization_locations: cityList,
+    q_organization_keyword_tags: config.keywords,
   });
   return data.people || [];
 }
