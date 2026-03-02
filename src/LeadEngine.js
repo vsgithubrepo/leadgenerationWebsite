@@ -82,12 +82,11 @@ const scoreColor = s => s>=70?'#22c55e':s>=45?'#f59e0b':'#ef4444';
 const scoreBg    = s => s>=70?'rgba(34,197,94,.12)':s>=45?'rgba(245,158,11,.12)':'rgba(239,68,68,.12)';
 
 // ── Main Component ────────────────────────────────────────────────
-export default function LeadEngine({ LogoMark }) {
-  // Fallback logo if not passed
-  if (!LogoMark) LogoMark = ({ size=36 }) => (
-    <div style={{ width:size, height:size, borderRadius:size*0.25, background:'linear-gradient(135deg,#32BFCA,#F1770C)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, boxShadow:'0 4px 16px rgba(241,119,12,0.35)' }}>
-      <span style={{ fontFamily:"'Syne',sans-serif", fontWeight:900, fontSize:size*0.46, color:'white', lineHeight:1 }}>e</span>
-    </div>
+export default function LeadEngine({ Logo }) {
+  // Fallback Logo if not passed from App.js
+  if (!Logo) Logo = ({ height=44, style={} }) => (
+    <img src="/etechcube-logo.jpg" alt="eTechCube"
+      style={{ height, width:'auto', objectFit:'contain', display:'block', ...style }} />
   );
   const { user } = useUser();
   const { signOut } = useClerk();
@@ -175,23 +174,12 @@ export default function LeadEngine({ LogoMark }) {
         <div style={S.sidebarTop}>
           {sidebarOpen && (
             <div style={S.brand}>
-              <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                <div style={{ width:36, height:36, borderRadius:9, background:'linear-gradient(135deg,#32BFCA,#F1770C)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, boxShadow:'0 4px 14px rgba(241,119,12,0.4)' }}>
-                  <span style={{ fontFamily:'Georgia,serif', fontWeight:700, fontSize:20, color:'white', lineHeight:1, fontStyle:'italic' }}>e</span>
-                </div>
-                <div>
-                  <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:15, lineHeight:1.1 }}>
-                    <span style={{ color:'#32BFCA' }}>eTech</span><span style={{ color:'#F1770C' }}>Cube</span>
-                  </div>
-                  <div style={{ fontSize:9, color:'#4b5563', letterSpacing:'0.1em', textTransform:'uppercase', marginTop:2 }}>Lead Engine</div>
-                </div>
-              </div>
+              <Logo height={40} />
             </div>
           )}
           {!sidebarOpen && (
-            <div style={{ width:36, height:36, borderRadius:9, background:'linear-gradient(135deg,#32BFCA,#F1770C)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 4px 14px rgba(241,119,12,0.4)' }}>
-              <span style={{ fontFamily:'Georgia,serif', fontWeight:700, fontSize:20, color:'white', lineHeight:1, fontStyle:'italic' }}>e</span>
-            </div>
+            <img src="/etechcube-logo.jpg" alt="e"
+              style={{ width:36, height:36, objectFit:'cover', objectPosition:'center top', borderRadius:6 }} />
           )}
           <button style={S.collapseBtn} onClick={()=>setSidebarOpen(o=>!o)}>
             {sidebarOpen ? '◀' : '▶'}
