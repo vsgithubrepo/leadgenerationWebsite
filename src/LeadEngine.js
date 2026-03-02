@@ -1,8 +1,7 @@
-/* eslint-disable no-unused-vars */
 import { useState, useEffect } from 'react';
 import { useUser, useClerk } from '@clerk/clerk-react';
 
-// ── Data Configuration ───────────────────────────────────────────
+// ── Data ─────────────────────────────────────────────────────────
 const SEGMENTS = [
   { id: '3pl',   label: '3PL / Freight Forwarders',    icon: '📦' },
   { id: 'mfg',   label: 'Manufacturing & Industrial',   icon: '🏭' },
@@ -79,11 +78,17 @@ function exportCSV(leads, filename) {
   a.download = filename || 'leads.csv'; a.click();
 }
 
-const scoreColor = s => s>=70?'#10b981':s>=45?'#f59e0b':'#ef4444';
-const scoreBg    = s => s>=70?'rgba(16,185,129,0.15)':s>=45?'rgba(245,158,11,0.15)':'rgba(239,68,68,0.15)';
+const scoreColor = s => s>=70?'#22c55e':s>=45?'#f59e0b':'#ef4444';
+const scoreBg    = s => s>=70?'rgba(34,197,94,.12)':s>=45?'rgba(245,158,11,.12)':'rgba(239,68,68,.12)';
 
 // ── Main Component ────────────────────────────────────────────────
-export default function LeadEngine() {
+export default function LeadEngine({ LogoMark }) {
+  // Fallback logo if not passed
+  if (!LogoMark) LogoMark = ({ size=36 }) => (
+    <div style={{ width:size, height:size, borderRadius:size*0.25, background:'linear-gradient(135deg,#32BFCA,#F1770C)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, boxShadow:'0 4px 16px rgba(241,119,12,0.35)' }}>
+      <span style={{ fontFamily:"'Syne',sans-serif", fontWeight:900, fontSize:size*0.46, color:'white', lineHeight:1 }}>e</span>
+    </div>
+  );
   const { user } = useUser();
   const { signOut } = useClerk();
   const [view, setView] = useState('generate');
@@ -101,20 +106,18 @@ export default function LeadEngine() {
   const [sortBy, setSortBy] = useState('score');
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  // FIX: Load history correctly from LocalStorage
+  // Load history
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('leadengine-v3-history');
-      if (saved) setHistory(JSON.parse(saved));
-    } catch (e) { console.error("History load error:", e); }
+    (async () => {
+      try {
+        const res = await window.storage.get('leadengine-v2-history');
+        if (res?.value) setHistory(JSON.parse(res.value));
+      } catch {}
+    })();
   }, []);
 
-  // FIX: Save history correctly to LocalStorage
-  const saveHistory = (newHistory) => {
-    try {
-      localStorage.setItem('leadengine-v3-history', JSON.stringify(newHistory));
-      setHistory(newHistory);
-    } catch (e) { console.error("History save error:", e); }
+  const saveHistory = async h => {
+    try { await window.storage.set('leadengine-v2-history', JSON.stringify(h)); } catch {}
   };
 
   const toggle = (arr, val) => arr.includes(val) ? arr.filter(x=>x!==val) : [...arr,val];
@@ -123,7 +126,7 @@ export default function LeadEngine() {
     if (!form.segments.length) return alert('Select at least one segment.');
     if (!form.regions.length)  return alert('Select at least one region.');
     setGenerating(true); setProgress(0); setView('generate');
-    const steps = [[12,'🔍 Scanning listings...'],[28,'🏭 Crawling directories...'],[46,'🔗 Extracting contacts...'],[60,'🚀 Querying databases...'],[74,'📧 Verifying emails...'],[85,'📞 Validating phones...'],[94,'🧹 Scoring leads...'],[100,'✅ Ready!']];
+    const steps = [[12,'🔍 Scanning JustDial listings...'],[28,'🏭 Crawling IndiaMart directory...'],[46,'🔗 Extracting LinkedIn pages...'],[60,'🚀 Querying Apollo.io...'],[74,'📧 Verifying emails...'],[85,'📞 Validating phones...'],[94,'🧹 Deduplicating & scoring...'],[100,'✅ Export ready!']];
     for (const [p, label] of steps) {
       await new Promise(r => setTimeout(r, rndInt(250, 600)));
       setProgress(p); setProgressLabel(label);
@@ -132,8 +135,8 @@ export default function LeadEngine() {
     const meta = {
       id: `run_${Date.now()}`,
       date: new Date().toLocaleString('en-IN'),
-      by: user?.firstName || 'User',
-      description: form.description || 'General Search',
+      by: user?.firstName || user?.primaryEmailAddress?.emailAddress || 'User',
+      description: form.description || '(No description)',
       segments: form.segments.map(id=>SEGMENTS.find(s=>s.id===id)?.label).filter(Boolean),
       regions: form.regions,
       total: leads.length,
@@ -144,8 +147,8 @@ export default function LeadEngine() {
       withPhone: leads.filter(l=>l.phone).length,
       leads,
     };
-    const newHistory = [meta, ...history].slice(0, 50); // Keep last 50
-    saveHistory(newHistory);
+    const newHistory = [meta, ...history].slice(0, 100);
+    setHistory(newHistory); await saveHistory(newHistory);
     setCurrentLeads(leads); setCurrentMeta(meta);
     setGenerating(false); setView('results');
   };
@@ -168,18 +171,36 @@ export default function LeadEngine() {
       <style>{globalCss}</style>
 
       {/* SIDEBAR */}
-      <aside style={{ ...S.sidebar, width: sidebarOpen ? 260 : 70 }}>
+      <aside style={{ ...S.sidebar, width: sidebarOpen ? 230 : 64, transition: 'width 0.25s ease' }}>
         <div style={S.sidebarTop}>
-          <div style={{...S.brand, justifyContent: sidebarOpen ? 'flex-start' : 'center'}}>
-             {/* Logo - White Filter applied */}
-            <img src="/logo.svg" alt="eTechCube" style={{ height: sidebarOpen ? 32 : 28, width: 'auto', filter: 'brightness(0) invert(1)' }} />
-          </div>
+          {sidebarOpen && (
+            <div style={S.brand}>
+              <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                <div style={{ width:36, height:36, borderRadius:9, background:'linear-gradient(135deg,#32BFCA,#F1770C)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, boxShadow:'0 4px 14px rgba(241,119,12,0.4)' }}>
+                  <span style={{ fontFamily:'Georgia,serif', fontWeight:700, fontSize:20, color:'white', lineHeight:1, fontStyle:'italic' }}>e</span>
+                </div>
+                <div>
+                  <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:15, lineHeight:1.1 }}>
+                    <span style={{ color:'#32BFCA' }}>eTech</span><span style={{ color:'#F1770C' }}>Cube</span>
+                  </div>
+                  <div style={{ fontSize:9, color:'#4b5563', letterSpacing:'0.1em', textTransform:'uppercase', marginTop:2 }}>Lead Engine</div>
+                </div>
+              </div>
+            </div>
+          )}
+          {!sidebarOpen && (
+            <div style={{ width:36, height:36, borderRadius:9, background:'linear-gradient(135deg,#32BFCA,#F1770C)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 4px 14px rgba(241,119,12,0.4)' }}>
+              <span style={{ fontFamily:'Georgia,serif', fontWeight:700, fontSize:20, color:'white', lineHeight:1, fontStyle:'italic' }}>e</span>
+            </div>
+          )}
+          <button style={S.collapseBtn} onClick={()=>setSidebarOpen(o=>!o)}>
+            {sidebarOpen ? '◀' : '▶'}
+          </button>
         </div>
 
         <nav style={S.nav}>
-          <div style={S.navGroup}>MENU</div>
-          {[{id:'generate',icon:'⚡',label:'Generate'},{id:'results',icon:'📊',label:'Results'},{id:'history',icon:'🕒',label:'History'}].map(n=>(
-            <button key={n.id} style={{ ...S.navBtn, ...(view===n.id&&!historyDetail?S.navBtnActive:{}), justifyContent: sidebarOpen ? 'flex-start' : 'center' }}
+          {[{id:'generate',icon:'⚡',label:'Generate'},{id:'results',icon:'📋',label:'Results'},{id:'history',icon:'🕐',label:'History'}].map(n=>(
+            <button key={n.id} style={{ ...S.navBtn, ...(view===n.id&&!historyDetail?S.navBtnActive:{}) }}
               onClick={()=>{setView(n.id);setHistoryDetail(null);}} title={n.label}>
               <span style={S.navIcon}>{n.icon}</span>
               {sidebarOpen && <span style={S.navLabel}>{n.label}</span>}
@@ -189,217 +210,289 @@ export default function LeadEngine() {
 
         {sidebarOpen && totalAllTime > 0 && (
           <div style={S.sidebarPill}>
-            <div style={S.pillLabel}>Total Leads Found</div>
+            <div style={S.pillLabel}>All-Time Leads</div>
             <div style={S.pillVal}>{totalAllTime.toLocaleString()}</div>
+            <div style={S.pillSub}>{history.length} searches</div>
           </div>
         )}
 
-        <div style={{flex:1}} />
-
         {/* User */}
-        <div style={{...S.sidebarUser, flexDirection: sidebarOpen ? 'row' : 'column'}}>
+        <div style={S.sidebarUser}>
           {user?.imageUrl && <img src={user.imageUrl} alt="" style={S.avatar} />}
           {sidebarOpen && (
             <div style={S.userInfo}>
               <div style={S.userName}>{user?.firstName || 'User'}</div>
-              <div style={S.userEmail}>Basic Plan</div>
+              <div style={S.userEmail}>{user?.primaryEmailAddress?.emailAddress?.split('@')[0]}</div>
             </div>
           )}
-          <button style={S.signOutBtn} onClick={()=>signOut()} title="Sign out">↩</button>
+          {sidebarOpen && (
+            <button style={S.signOutBtn} onClick={()=>signOut()} title="Sign out">↪</button>
+          )}
         </div>
       </aside>
 
       {/* MAIN */}
-      <main style={S.main}>
-        <div style={S.topHeader}>
-           <button style={S.collapseBtn} onClick={()=>setSidebarOpen(o=>!o)}>☰</button>
-           <div style={S.headerTitle}>{view === 'generate' ? 'New Campaign' : view === 'results' ? 'Campaign Results' : 'Search History'}</div>
-        </div>
+      <main style={{ ...S.main, marginLeft: sidebarOpen ? 230 : 64, width: `calc(100% - ${sidebarOpen ? 230 : 64}px)` }}>
 
-        <div style={S.contentContainer}>
-          {/* ── GENERATE ───────────────────────────────────── */}
-          {view==='generate' && !generating && (
-            <div style={S.page}>
-              <div style={S.card}>
-                <FormSection title="Describe Ideal Customer" hint="AI will optimize your search based on this description.">
-                  <textarea rows={3} value={form.description} onChange={e=>setForm(f=>({...f,description:e.target.value}))}
-                    placeholder="e.g. Mid-size freight forwarders in Mumbai handling pharma exports..."
-                    style={S.textarea} />
-                </FormSection>
+        {/* ── GENERATE ───────────────────────────────────── */}
+        {view==='generate' && !generating && (
+          <div style={S.page}>
+            <div style={S.pageHeader}>
+              <h1 style={S.pageTitle}>Generate Leads</h1>
+              <p style={S.pageSubtitle}>Describe your target prospect and configure the search below</p>
+            </div>
 
-                <div style={S.gridTwo}>
-                  <FormSection title="Target Industry">
-                    <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-                      {SEGMENTS.map(s=>{
-                        const active = form.segments.includes(s.id);
-                        return <button key={s.id} onClick={()=>setForm(f=>({...f,segments:toggle(f.segments,s.id)}))}
-                          style={{ ...S.toggleBtn, ...(active?S.toggleBtnActive:{}) }}>
-                          <span style={{marginRight:8}}>{s.icon}</span> {s.label}
-                        </button>;
-                      })}
-                    </div>
-                  </FormSection>
-                  <FormSection title="Data Sources">
-                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-                      {SOURCES.map(s=>{
-                        const active = form.sources.includes(s.id);
-                        return <button key={s.id} onClick={()=>setForm(f=>({...f,sources:toggle(f.sources,s.id)}))}
-                          style={{ ...S.toggleBtn, ...(active?S.toggleBtnActive:{}), justifyContent:'center' }}>
-                          <span style={{marginRight:6}}>{s.icon}</span> {s.label}
-                        </button>;
-                      })}
-                    </div>
-                  </FormSection>
+            <FormSection title="Describe Your Ideal Prospect" hint="Plain English — industry focus, company size, pain points, anything specific">
+              <textarea rows={4} value={form.description} onChange={e=>setForm(f=>({...f,description:e.target.value}))}
+                placeholder="e.g. Mid-size freight forwarders in Mumbai with 50+ employees still using Excel for shipment tracking. Looking for companies that recently expanded or are hiring logistics staff..."
+                style={S.textarea} />
+            </FormSection>
+
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(280px, 1fr))', gap:20, marginBottom:24 }}>
+              <FormSection title="Business Segments" hint="Target one or more">
+                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                  {SEGMENTS.map(s=>{
+                    const active = form.segments.includes(s.id);
+                    return <button key={s.id} onClick={()=>setForm(f=>({...f,segments:toggle(f.segments,s.id)}))}
+                      style={{ ...S.toggleBtn, ...(active?S.toggleBtnActive:{}) }}>
+                      <span>{s.icon}</span> {s.label}
+                    </button>;
+                  })}
                 </div>
-
-                <FormSection title="Target Regions">
-                  <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
-                    {CITIES.map(c=>{
-                      const active = form.regions.includes(c);
-                      return <button key={c} onClick={()=>setForm(f=>({...f,regions:toggle(f.regions,c)}))}
-                        style={{ ...S.chip, ...(active?S.chipActive:{}) }}>{c}</button>;
-                    })}
-                  </div>
-                </FormSection>
-
-                <div style={S.gridTwo}>
-                  <FormSection title="Volume">
-                    <select value={form.maxLeads} onChange={e=>setForm(f=>({...f,maxLeads:Number(e.target.value)}))} style={S.select}>
-                      {[50,100,200,500,1000].map(n=><option key={n} value={n}>{n.toLocaleString()} leads</option>)}
-                    </select>
-                  </FormSection>
-                  <FormSection title="Filters">
-                    <input value={form.instructions} onChange={e=>setForm(f=>({...f,instructions:e.target.value}))}
-                      placeholder="Ex: Exclude IT companies..."
-                      style={S.input} />
-                  </FormSection>
+              </FormSection>
+              <FormSection title="Data Sources" hint="Which platforms to scrape">
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                  {SOURCES.map(s=>{
+                    const active = form.sources.includes(s.id);
+                    return <button key={s.id} onClick={()=>setForm(f=>({...f,sources:toggle(f.sources,s.id)}))}
+                      style={{ ...S.toggleBtn, ...(active?S.toggleBtnActive:{}), flexDirection:'column', padding:'14px 10px', gap:6, fontSize:12 }}>
+                      <span style={{fontSize:20}}>{s.icon}</span> {s.label}
+                    </button>;
+                  })}
                 </div>
+              </FormSection>
+            </div>
 
-                <button onClick={handleGenerate} style={S.generateBtn}>
-                  START GENERATION ➜
-                </button>
+            <FormSection title="Target Cities" hint="Select regions to focus on">
+              <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+                {CITIES.map(c=>{
+                  const active = form.regions.includes(c);
+                  return <button key={c} onClick={()=>setForm(f=>({...f,regions:toggle(f.regions,c)}))}
+                    style={{ ...S.chip, ...(active?S.chipActive:{}) }}>{c}</button>;
+                })}
+              </div>
+            </FormSection>
+
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
+              <FormSection title="Lead Count" hint="How many leads to generate">
+                <select value={form.maxLeads} onChange={e=>setForm(f=>({...f,maxLeads:Number(e.target.value)}))} style={S.select}>
+                  {[50,100,200,500,1000].map(n=><option key={n} value={n}>{n.toLocaleString()} leads</option>)}
+                </select>
+              </FormSection>
+              <FormSection title="Special Instructions" hint="Additional filters or focus areas">
+                <textarea rows={3} value={form.instructions} onChange={e=>setForm(f=>({...f,instructions:e.target.value}))}
+                  placeholder="e.g. Only 100+ employee companies, exclude IT sector, focus on port cities..."
+                  style={{ ...S.textarea, minHeight:80, fontSize:13 }} />
+              </FormSection>
+            </div>
+
+            <button onClick={handleGenerate} style={S.generateBtn}>
+              ⚡ GENERATE {form.maxLeads.toLocaleString()} LEADS
+            </button>
+          </div>
+        )}
+
+        {/* ── PROGRESS ───────────────────────────────────── */}
+        {view==='generate' && generating && (
+          <div style={S.progressPage}>
+            <div style={S.progressInner}>
+              <div style={S.progressTitle}>Hunting Leads...</div>
+              <div style={S.progressSub}>Scraping {form.sources.length} sources across {form.regions.slice(0,3).join(', ')}{form.regions.length>3?` +${form.regions.length-3} more`:''}</div>
+              <div style={S.progressBarWrap}>
+                <div style={{ ...S.progressBar, width:`${progress}%` }} />
+              </div>
+              <div style={S.progressMeta}>
+                <span style={{ color:'#9ca3af', fontSize:13 }}>{progressLabel}</span>
+                <span style={{ color:'#f59e0b', fontWeight:700, fontSize:14 }}>{progress}%</span>
+              </div>
+              <div style={S.dots}>
+                {[0,1,2].map(i=><div key={i} style={{ ...S.dot, animationDelay:`${i*0.2}s` }} />)}
               </div>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* ── PROGRESS ───────────────────────────────────── */}
-          {view==='generate' && generating && (
-            <div style={S.progressPage}>
-              <div style={S.progressCard}>
-                <div style={S.spinner}></div>
-                <div style={S.progressTitle}>Generating Leads</div>
-                <div style={S.progressSub}>{progressLabel}</div>
-                <div style={S.progressBarWrap}>
-                  <div style={{ ...S.progressBar, width:`${progress}%` }} />
-                </div>
+        {/* ── RESULTS ────────────────────────────────────── */}
+        {(view==='results' || (view==='history'&&historyDetail)) && activeMeta && (
+          <div style={S.page}>
+            {historyDetail && (
+              <button style={S.backBtn} onClick={()=>{setHistoryDetail(null);setView('history');}}>
+                ← Back to History
+              </button>
+            )}
+            <div style={S.resultsHeader}>
+              <div>
+                <h1 style={S.pageTitle}>{activeMeta.total.toLocaleString()} Leads Found</h1>
+                <p style={S.pageSubtitle}>{activeMeta.date} · by {activeMeta.by} · {activeMeta.description.slice(0,70)}{activeMeta.description.length>70?'…':''}</p>
+              </div>
+              <div style={{ display:'flex', gap:10 }}>
+                <button style={S.secondaryBtn} onClick={()=>exportCSV(displayLeads,`leads_${Date.now()}.csv`)}>📥 Export CSV</button>
+                <button style={S.primaryBtn} onClick={()=>setView('generate')}>⚡ New Search</button>
               </div>
             </div>
-          )}
 
-          {/* ── RESULTS ────────────────────────────────────── */}
-          {(view==='results' || (view==='history'&&historyDetail)) && activeMeta && (
-            <div style={{...S.page, maxWidth:'100%'}}>
-              {historyDetail && (
-                <button style={S.backBtn} onClick={()=>{setHistoryDetail(null);setView('history');}}>
-                  ← Back
-                </button>
-              )}
-              
-              <div style={S.statsRow}>
-                <div style={S.statCard}>
-                  <div style={S.statLabel}>Total Found</div>
-                  <div style={S.statVal}>{activeMeta.total}</div>
+            {/* Stats */}
+            <div style={S.statsRow}>
+              {[
+                {label:'🔥 Hot (A/A+)',val:activeMeta.hot,c:'#22c55e'},
+                {label:'🟡 Warm (B/B+)',val:activeMeta.warm,c:'#f59e0b'},
+                {label:'🔵 Cold',val:activeMeta.cold,c:'#6b7280'},
+                {label:'📧 With Email',val:activeMeta.withEmail,c:'#f59e0b'},
+                {label:'📞 With Phone',val:activeMeta.withPhone,c:'#f59e0b'},
+              ].map(s=>(
+                <div key={s.label} style={S.statCard}>
+                  <div style={S.statLabel}>{s.label}</div>
+                  <div style={{ ...S.statVal, color:s.c }}>{s.val.toLocaleString()}</div>
                 </div>
-                <div style={S.statCard}>
-                  <div style={S.statLabel}>Hot Leads</div>
-                  <div style={{...S.statVal, color:'#10b981'}}>{activeMeta.hot}</div>
-                </div>
-                <div style={S.statCard}>
-                  <div style={S.statLabel}>Emails</div>
-                  <div style={{...S.statVal, color:'#3b82f6'}}>{activeMeta.withEmail}</div>
-                </div>
-                <div style={{marginLeft:'auto', display:'flex', gap:10}}>
-                  <button style={S.secondaryBtn} onClick={()=>exportCSV(displayLeads,`leads_${Date.now()}.csv`)}>Export CSV</button>
-                  <button style={S.primaryBtn} onClick={()=>setView('generate')}>New Search</button>
-                </div>
-              </div>
+              ))}
+            </div>
 
-              <div style={S.card}>
-                <div style={S.filters}>
-                  <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search results..." style={{ ...S.input, width:240 }} />
-                  <select value={filterSeg} onChange={e=>setFilterSeg(e.target.value)} style={S.select}>
-                    <option value="all">All Segments</option>
-                    {SEGMENTS.map(s=><option key={s.id} value={s.label}>{s.label}</option>)}
-                  </select>
-                  <select value={filterGrade} onChange={e=>setFilterGrade(e.target.value)} style={S.select}>
-                    <option value="all">All Grades</option>
-                    <option value="hot">Hot Only</option>
-                  </select>
-                </div>
+            {/* Filters */}
+            <div style={S.filters}>
+              <input value={search} onChange={e=>setSearch(e.target.value)}
+                placeholder="🔍 Search company, contact, city..."
+                style={{ ...S.input, width:240 }} />
+              <select value={filterGrade} onChange={e=>setFilterGrade(e.target.value)} style={S.select}>
+                <option value="all">All Grades</option>
+                <option value="hot">🔥 Hot (A/A+)</option>
+                <option value="B+">B+</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+              </select>
+              <select value={filterSeg} onChange={e=>setFilterSeg(e.target.value)} style={S.select}>
+                <option value="all">All Segments</option>
+                {SEGMENTS.map(s=><option key={s.id} value={s.label}>{s.label}</option>)}
+              </select>
+              <select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={S.select}>
+                <option value="score">Sort: Score</option>
+                <option value="company">Sort: Company</option>
+                <option value="city">Sort: City</option>
+              </select>
+              <span style={{ marginLeft:'auto', color:'#6b7280', fontSize:12 }}>{displayLeads.length} leads</span>
+            </div>
 
-                <div style={S.tableWrap}>
-                  <table style={S.table}>
-                    <thead>
-                      <tr style={S.thead}>
-                        <th style={S.th}>Score</th>
-                        <th style={S.th}>Company</th>
-                        <th style={S.th}>Location</th>
-                        <th style={S.th}>Contact</th>
-                        <th style={S.th}>Email</th>
-                        <th style={S.th}>Phone</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {displayLeads.slice(0,100).map((l,i)=>(
-                        <tr key={l.id} style={S.tr}>
-                          <td style={S.td}>
-                            <span style={{ ...S.gradeTag, background:scoreBg(l.score), color:scoreColor(l.score) }}>{l.score}</span>
-                          </td>
-                          <td style={S.td}>
-                            <div style={S.companyName}>{l.company}</div>
-                            {l.website && <a href={l.website} target="_blank" rel="noreferrer" style={S.link}>Website ↗</a>}
-                          </td>
-                          <td style={{ ...S.td, color:'#94a3b8' }}>{l.city}</td>
-                          <td style={S.td}>
-                            <div style={{fontWeight:500}}>{l.contact}</div>
-                            <div style={{fontSize:12, color:'#64748b'}}>{l.designation}</div>
-                          </td>
-                          <td style={S.td}>
-                            {l.email?<a href={`mailto:${l.email}`} style={{color:'#3b82f6', textDecoration:'none'}}>{l.email}</a>:<span style={{opacity:0.3}}>—</span>}
-                          </td>
-                          <td style={S.td}>{l.phone||<span style={{opacity:0.3}}>—</span>}</td>
-                        </tr>
+            {/* Table */}
+            <div style={S.tableWrap}>
+              <div style={{ overflowX:'auto' }}>
+                <table style={S.table}>
+                  <thead>
+                    <tr style={S.thead}>
+                      {['Score','Company','City','Contact','Email','Phone','Segment','Hiring','Source'].map(h=>(
+                        <th key={h} style={S.th}>{h}</th>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {displayLeads.slice(0,200).map((l,i)=>(
+                      <tr key={l.id} style={{ ...S.tr, background: i%2===0?'transparent':'rgba(255,255,255,0.015)' }}>
+                        <td style={S.td}>
+                          <span style={{ ...S.gradeTag, background:scoreBg(l.score), color:scoreColor(l.score) }}>{l.grade}</span>
+                          <span style={{ color:scoreColor(l.score), fontWeight:600, fontSize:12, marginLeft:6 }}>{l.score}</span>
+                        </td>
+                        <td style={{ ...S.td, maxWidth:190 }}>
+                          <div style={S.companyName}>{l.company}</div>
+                          {l.website && <a href={l.website} target="_blank" rel="noreferrer" style={S.link}>🌐 website</a>}
+                        </td>
+                        <td style={{ ...S.td, whiteSpace:'nowrap', color:'#9ca3af' }}>{l.city}</td>
+                        <td style={{ ...S.td, maxWidth:150 }}>
+                          <div style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontSize:12 }}>{l.contact||'—'}</div>
+                          {l.designation && <div style={{ color:'#6b7280', fontSize:11, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{l.designation}</div>}
+                        </td>
+                        <td style={{ ...S.td, maxWidth:180 }}>
+                          {l.email?<a href={`mailto:${l.email}`} style={{ ...S.link, color:'#f59e0b', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', display:'block' }}>{l.email}</a>:<span style={{ color:'#4b5563', fontSize:12 }}>—</span>}
+                        </td>
+                        <td style={{ ...S.td, whiteSpace:'nowrap', fontSize:12 }}>{l.phone||<span style={{color:'#4b5563'}}>—</span>}</td>
+                        <td style={S.td}>
+                          <span style={S.segTag}>{l.segment.split(' / ')[0]}</span>
+                        </td>
+                        <td style={S.td}>
+                          {l.hiring?<span style={S.hiringTag}>📢 {l.hiring.split(' ')[0]}</span>:<span style={{color:'#4b5563',fontSize:12}}>—</span>}
+                        </td>
+                        <td style={{ ...S.td, color:'#6b7280', fontSize:11, whiteSpace:'nowrap' }}>{l.source}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
+              {displayLeads.length>200&&<div style={S.tableFooter}>Showing 200 of {displayLeads.length} — Export CSV to see all</div>}
             </div>
-          )}
+          </div>
+        )}
 
-          {/* ── HISTORY ────────────────────────────────────── */}
-          {view==='history' && !historyDetail && (
-            <div style={S.page}>
-              <div style={{display:'grid', gap:16}}>
-                {history.length === 0 && <div style={{textAlign:'center', padding:40, color:'#64748b'}}>No history found. Start a new search.</div>}
+        {/* ── EMPTY RESULTS ───────────────────────────────── */}
+        {view==='results' && !activeMeta && (
+          <div style={S.emptyState}>
+            <div style={S.emptyIcon}>📋</div>
+            <div style={S.emptyTitle}>No results yet</div>
+            <div style={S.emptySub}>Run a lead generation search to see results here.</div>
+            <button style={S.primaryBtn} onClick={()=>setView('generate')}>⚡ Generate Leads</button>
+          </div>
+        )}
+
+        {/* ── HISTORY ────────────────────────────────────── */}
+        {view==='history' && !historyDetail && (
+          <div style={S.page}>
+            <div style={S.pageHeader}>
+              <h1 style={S.pageTitle}>Search History</h1>
+              <p style={S.pageSubtitle}>All previous searches — click any run to browse its leads</p>
+            </div>
+            {history.length===0 ? (
+              <div style={S.emptyState}>
+                <div style={S.emptyIcon}>🕐</div>
+                <div style={S.emptyTitle}>No history yet</div>
+                <div style={S.emptySub}>Your first lead generation run will appear here.</div>
+                <button style={S.primaryBtn} onClick={()=>setView('generate')}>⚡ Generate Leads</button>
+              </div>
+            ) : (
+              <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
                 {history.map(run=>(
-                  <div key={run.id} style={S.historyCard} onClick={()=>{setHistoryDetail(run);setView('history');}}>
-                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                      <div>
-                        <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:4 }}>
-                          <span style={S.historyCount}>{run.total} Leads</span>
-                          <span style={{ fontSize:13, color:'#64748b' }}>{run.date}</span>
+                  <div key={run.id} style={S.historyCard}
+                    onClick={()=>{setHistoryDetail(run);setSearch('');setFilterGrade('all');setFilterSeg('all');}}
+                    onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(245,158,11,0.35)';e.currentTarget.style.background='rgba(245,158,11,0.03)';}}
+                    onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,0.07)';e.currentTarget.style.background='#111418';}}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:12 }}>
+                      <div style={{ flex:1 }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
+                          <span style={S.historyCount}>{run.total.toLocaleString()}</span>
+                          <span style={{ color:'#9ca3af', fontSize:13 }}>leads</span>
+                          <span style={S.hotBadge}>🔥 {run.hot} hot</span>
+                          <span style={{ fontSize:11, color:'#6b7280' }}>by {run.by}</span>
                         </div>
-                        <div style={{ color:'#94a3b8', fontSize:14 }}>{run.description}</div>
+                        <div style={{ color:'#e8e4dc', fontSize:13.5, fontWeight:500, marginBottom:8 }}>{run.description}</div>
+                        <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                          {run.segments?.map(s=><span key={s} style={S.historyTag}>{s.split(' / ')[0]}</span>)}
+                          {run.regions?.slice(0,3).map(r=><span key={r} style={S.historyRegionTag}>{r}</span>)}
+                          {run.regions?.length>3&&<span style={{fontSize:11,color:'#6b7280'}}>+{run.regions.length-3}</span>}
+                        </div>
                       </div>
-                      <div style={S.arrowBtn}>→</div>
+                      <div style={{ textAlign:'right', display:'flex', flexDirection:'column', alignItems:'flex-end', gap:8 }}>
+                        <div style={{ color:'#6b7280', fontSize:11 }}>{run.date}</div>
+                        <div style={{ display:'flex', gap:16 }}>
+                          <MiniStat label="Email" val={run.withEmail} />
+                          <MiniStat label="Phone" val={run.withPhone} />
+                        </div>
+                        <button style={S.downloadBtn}
+                          onClick={e=>{e.stopPropagation();exportCSV(run.leads,`leads_${run.id}.csv`);}}>
+                          📥 Download
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </main>
     </div>
   );
@@ -408,106 +501,111 @@ export default function LeadEngine() {
 function FormSection({ title, hint, children }) {
   return (
     <div style={{ marginBottom:24 }}>
-      <div style={{ marginBottom:8 }}>
-        <div style={{ fontWeight:600, fontSize:14, color:'#e2e8f0' }}>{title}</div>
-        {hint&&<div style={{ fontSize:12, color:'#64748b' }}>{hint}</div>}
+      <div style={{ marginBottom:10 }}>
+        <div style={{ fontWeight:600, fontSize:13.5, color:'#e8e4dc', marginBottom:2 }}>{title}</div>
+        {hint&&<div style={{ fontSize:12, color:'#6b7280' }}>{hint}</div>}
       </div>
       {children}
     </div>
   );
 }
 
-// ── PREMIUM GLASS DESIGN SYSTEM ──────────────────────────────────
+function MiniStat({ label, val }) {
+  return (
+    <div style={{ textAlign:'center' }}>
+      <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:700, fontSize:15, color:'#e8e4dc' }}>{val}</div>
+      <div style={{ fontSize:10, color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.06em' }}>{label}</div>
+    </div>
+  );
+}
+
+// ── Styles ────────────────────────────────────────────────────────
 const S = {
-  // Layout
-  root: { display:'flex', minHeight:'100vh', background:'linear-gradient(to bottom right, #0f172a, #1e1b4b)', fontFamily:"'Inter', sans-serif", color:'#f8fafc' },
-  sidebar: { background:'rgba(15, 23, 42, 0.6)', backdropFilter:'blur(12px)', borderRight:'1px solid rgba(255,255,255,0.05)', display:'flex', flexDirection:'column', position:'fixed', top:0, left:0, bottom:0, zIndex:50 },
-  sidebarTop: { height:64, display:'flex', alignItems:'center', padding:'0 24px', borderBottom:'1px solid rgba(255,255,255,0.05)' },
-  brand: { display:'flex', alignItems:'center', width:'100%' },
-  
-  main: { flex:1, marginLeft:70, display:'flex', flexDirection:'column', minHeight:'100vh' }, 
-  topHeader: { height:64, display:'flex', alignItems:'center', padding:'0 32px', borderBottom:'1px solid rgba(255,255,255,0.05)', background:'rgba(15, 23, 42, 0.3)', backdropFilter:'blur(8px)' },
-  headerTitle: { fontSize:18, fontWeight:600, color:'#f1f5f9' },
-  contentContainer: { padding:'32px', maxWidth:'1200px', width:'100%', margin:'0 auto' },
-  
-  // Navigation
-  nav: { padding:'24px 12px', flex:1 },
-  navGroup: { fontSize:10, fontWeight:700, color:'#475569', padding:'0 12px 8px', letterSpacing:'1px' },
-  navBtn: { display:'flex', alignItems:'center', gap:12, width:'100%', padding:'12px', borderRadius:8, border:'none', background:'transparent', color:'#94a3b8', fontSize:14, marginBottom:4, cursor:'pointer', transition:'all 0.2s', fontWeight:500 },
-  navBtnActive: { background:'rgba(59, 130, 246, 0.15)', color:'#60a5fa' },
-  navIcon: { fontSize:16 },
-  
-  sidebarPill: { margin:'16px', background:'rgba(255,255,255,0.05)', borderRadius:12, padding:'16px', border:'1px solid rgba(255,255,255,0.05)' },
-  pillLabel: { fontSize:11, color:'#94a3b8', marginBottom:4 },
-  pillVal: { fontSize:20, fontWeight:700, color:'#f8fafc' },
-  
-  sidebarUser: { padding:'16px', borderTop:'1px solid rgba(255,255,255,0.05)', display:'flex', alignItems:'center', gap:12 },
-  avatar: { width:36, height:36, borderRadius:'50%', border:'2px solid rgba(255,255,255,0.1)' },
-  userInfo: { flex:1, overflow:'hidden' },
-  userName: { fontSize:13, fontWeight:600 },
-  userEmail: { fontSize:11, color:'#64748b' },
-  signOutBtn: { background:'none', border:'none', color:'#64748b', cursor:'pointer', fontSize:16 },
-
-  // Components
-  card: { background:'rgba(30, 41, 59, 0.4)', backdropFilter:'blur(10px)', border:'1px solid rgba(255,255,255,0.05)', borderRadius:16, padding:'24px' },
-  page: { width:'100%' },
-  
-  // Form Elements
-  textarea: { width:'100%', padding:'16px', fontSize:14, background:'rgba(15, 23, 42, 0.6)', border:'1px solid rgba(255,255,255,0.1)', color:'#f1f5f9', borderRadius:12, outline:'none', minHeight:100, fontFamily:"'Inter',sans-serif", transition:'border 0.2s' },
-  input: { padding:'12px 16px', borderRadius:8, background:'rgba(15, 23, 42, 0.6)', border:'1px solid rgba(255,255,255,0.1)', color:'#f1f5f9', fontSize:14, outline:'none', width:'100%' },
-  select: { padding:'12px 16px', borderRadius:8, background:'rgba(15, 23, 42, 0.6)', border:'1px solid rgba(255,255,255,0.1)', color:'#f1f5f9', fontSize:14, outline:'none', width:'100%', cursor:'pointer' },
-  
-  gridTwo: { display:'grid', gridTemplateColumns:'1fr 1fr', gap:24, marginBottom:24 },
-  
-  toggleBtn: { display:'flex', alignItems:'center', padding:'16px', borderRadius:12, border:'1px solid rgba(255,255,255,0.1)', background:'rgba(30, 41, 59, 0.4)', color:'#94a3b8', fontSize:14, cursor:'pointer', transition:'all 0.2s' },
-  toggleBtnActive: { borderColor:'#3b82f6', background:'rgba(59, 130, 246, 0.1)', color:'#60a5fa', boxShadow:'0 0 15px rgba(59,130,246,0.1)' },
-  
-  chip: { padding:'8px 16px', borderRadius:20, border:'1px solid rgba(255,255,255,0.1)', background:'rgba(30, 41, 59, 0.4)', color:'#94a3b8', fontSize:13, cursor:'pointer', margin:0, transition:'all 0.2s' },
-  chipActive: { borderColor:'#3b82f6', background:'rgba(59, 130, 246, 0.9)', color:'#fff' },
-
-  generateBtn: { width:'100%', padding:'20px', borderRadius:12, border:'none', background:'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', color:'#fff', fontSize:15, fontWeight:700, cursor:'pointer', marginTop:16, boxShadow:'0 10px 30px -10px rgba(59, 130, 246, 0.5)', letterSpacing:'1px', transition:'transform 0.1s' },
-  primaryBtn: { padding:'10px 24px', borderRadius:8, border:'none', background:'#3b82f6', color:'#fff', fontWeight:600, fontSize:13, cursor:'pointer' },
-  secondaryBtn: { padding:'10px 24px', borderRadius:8, border:'1px solid rgba(255,255,255,0.1)', background:'transparent', color:'#f1f5f9', fontWeight:500, fontSize:13, cursor:'pointer' },
-  backBtn: { background:'none', border:'none', color:'#94a3b8', cursor:'pointer', marginBottom:20, padding:0, fontSize:14, fontWeight:500 },
-  collapseBtn: { background:'transparent', border:'none', color:'#94a3b8', fontSize:20, cursor:'pointer', marginRight:16 },
-
-  // Stats
-  statsRow: { display:'flex', gap:16, marginBottom:24, flexWrap:'wrap' },
-  statCard: { background:'rgba(30, 41, 59, 0.4)', backdropFilter:'blur(10px)', border:'1px solid rgba(255,255,255,0.05)', borderRadius:12, padding:'16px 24px', minWidth:140 },
-  statLabel: { fontSize:11, color:'#94a3b8', textTransform:'uppercase', fontWeight:600, marginBottom:4 },
-  statVal: { fontSize:24, fontWeight:700, color:'#f1f5f9' },
-
-  // Table
-  filters: { display:'flex', gap:12, marginBottom:20 },
-  tableWrap: { borderRadius:12, overflow:'hidden', border:'1px solid rgba(255,255,255,0.05)' },
-  table: { width:'100%', borderCollapse:'collapse', fontSize:14 },
-  thead: { background:'rgba(15, 23, 42, 0.5)' },
-  th: { padding:'16px 20px', textAlign:'left', fontWeight:600, fontSize:12, color:'#94a3b8', textTransform:'uppercase' },
-  tr: { borderBottom:'1px solid rgba(255,255,255,0.05)', transition:'background 0.1s', cursor:'default' },
-  td: { padding:'16px 20px', verticalAlign:'middle', color:'#e2e8f0' },
-  gradeTag: { display:'inline-flex', alignItems:'center', justifyContent:'center', width:32, height:32, borderRadius:8, fontWeight:700, fontSize:13 },
-  companyName: { fontWeight:600, color:'#fff', marginBottom:2 },
-  link: { textDecoration:'none', fontSize:11, color:'#3b82f6' },
-
-  // History
-  historyCard: { background:'rgba(30, 41, 59, 0.4)', border:'1px solid rgba(255,255,255,0.05)', borderRadius:12, padding:'24px', cursor:'pointer', transition:'all 0.2s', display:'flex', alignItems:'center', justifyContent:'space-between' },
-  historyCount: { fontSize:16, fontWeight:700, color:'#f1f5f9' },
-  arrowBtn: { color:'#64748b', fontSize:20 },
-
-  // Progress
-  progressPage: { display:'flex', alignItems:'center', justifyContent:'center', minHeight:'50vh' },
-  progressCard: { width:400, textAlign:'center', background:'rgba(30, 41, 59, 0.8)', padding:40, borderRadius:24, border:'1px solid rgba(255,255,255,0.05)' },
-  progressTitle: { fontSize:20, fontWeight:700, color:'#fff', marginBottom:8 },
-  progressSub: { color:'#94a3b8', marginBottom:32 },
-  progressBarWrap: { background:'rgba(255,255,255,0.1)', borderRadius:100, height:6 },
-  progressBar: { height:'100%', borderRadius:100, background:'#3b82f6', transition:'width 0.3s' },
-  spinner: { width:40, height:40, borderRadius:'50%', border:'3px solid rgba(255,255,255,0.1)', borderTopColor:'#3b82f6', animation:'spin 1s linear infinite', margin:'0 auto 20px' },
+  root:         { display:'flex', minHeight:'100vh', width:'100%', background:'#0a0c0f', fontFamily:"'DM Sans',sans-serif", color:'#e8e4dc', overflowX:'hidden' },
+  sidebar:      { background:'#0d1117', borderRight:'1px solid rgba(255,255,255,0.06)', display:'flex', flexDirection:'column', position:'fixed', top:0, left:0, bottom:0, zIndex:100, overflow:'hidden' },
+  sidebarTop:   { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'24px 16px 20px', borderBottom:'1px solid rgba(255,255,255,0.06)', minHeight:80 },
+  brand:        { flex:1 },
+  brandName:    { fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:17, color:'#f59e0b', letterSpacing:'-0.5px', lineHeight:1.1 },
+  brandSub:     { fontSize:9, color:'#4b5563', textTransform:'uppercase', letterSpacing:'0.1em', marginTop:4 },
+  collapseBtn:  { background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)', color:'#6b7280', borderRadius:6, width:28, height:28, fontSize:10, cursor:'pointer', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' },
+  nav:          { padding:'16px 10px', flex:1 },
+  navBtn:       { display:'flex', alignItems:'center', gap:10, width:'100%', padding:'10px 10px', borderRadius:8, border:'none', background:'transparent', color:'#9ca3af', fontSize:13, marginBottom:2, cursor:'pointer', textAlign:'left', transition:'all 0.15s', whiteSpace:'nowrap' },
+  navBtnActive: { background:'rgba(245,158,11,0.12)', color:'#f59e0b', fontWeight:600 },
+  navIcon:      { fontSize:15, flexShrink:0 },
+  navLabel:     {},
+  sidebarPill:  { margin:'0 10px 16px', background:'rgba(245,158,11,0.06)', border:'1px solid rgba(245,158,11,0.15)', borderRadius:10, padding:'14px' },
+  pillLabel:    { fontSize:9, color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:4 },
+  pillVal:      { fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:22, color:'#f59e0b' },
+  pillSub:      { fontSize:11, color:'#6b7280', marginTop:2 },
+  sidebarUser:  { display:'flex', alignItems:'center', gap:8, padding:'14px 12px', borderTop:'1px solid rgba(255,255,255,0.06)', minHeight:60 },
+  avatar:       { width:30, height:30, borderRadius:'50%', flexShrink:0 },
+  userInfo:     { flex:1, minWidth:0 },
+  userName:     { fontSize:12, fontWeight:600, color:'#e8e4dc', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' },
+  userEmail:    { fontSize:10, color:'#6b7280', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' },
+  signOutBtn:   { background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)', color:'#6b7280', borderRadius:6, width:26, height:26, fontSize:13, cursor:'pointer', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' },
+  main:         { marginLeft:230, flex:1, minHeight:'100vh', minWidth:0, width:'calc(100% - 230px)', transition:'margin-left 0.25s ease, width 0.25s ease', overflowX:'hidden' },
+  page:         { padding:'32px 48px', width:'100%', boxSizing:'border-box' },
+  pageHeader:   { marginBottom:32 },
+  pageTitle:    { fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:28, letterSpacing:'-0.8px' },
+  pageSubtitle: { color:'#9ca3af', fontSize:13.5, marginTop:6 },
+  textarea:     { width:'100%', padding:'13px 15px', fontSize:14, resize:'vertical', lineHeight:1.6, minHeight:100, background:'#111418', border:'1px solid rgba(255,255,255,0.1)', color:'#e8e4dc', borderRadius:10, fontFamily:"'DM Sans',sans-serif", outline:'none', boxSizing:'border-box' },
+  toggleBtn:    { display:'flex', alignItems:'center', gap:9, padding:'11px 14px', borderRadius:9, border:'1.5px solid rgba(255,255,255,0.1)', background:'#111418', color:'#9ca3af', fontWeight:400, fontSize:13.5, cursor:'pointer', textAlign:'left', transition:'all 0.15s' },
+  toggleBtnActive:{ borderColor:'#f59e0b', background:'rgba(245,158,11,0.1)', color:'#fbbf24', fontWeight:600 },
+  chip:         { padding:'7px 13px', borderRadius:20, border:'1.5px solid rgba(255,255,255,0.1)', background:'#111418', color:'#9ca3af', fontSize:12.5, cursor:'pointer', transition:'all 0.15s' },
+  chipActive:   { borderColor:'#f59e0b', background:'rgba(245,158,11,0.1)', color:'#fbbf24', fontWeight:600 },
+  select:       { padding:'10px 12px', borderRadius:8, background:'#111418', border:'1px solid rgba(255,255,255,0.1)', color:'#e8e4dc', fontSize:13, cursor:'pointer', outline:'none', fontFamily:"'DM Sans',sans-serif" },
+  input:        { padding:'9px 13px', borderRadius:8, background:'#111418', border:'1px solid rgba(255,255,255,0.1)', color:'#e8e4dc', fontSize:13, outline:'none', fontFamily:"'DM Sans',sans-serif" },
+  generateBtn:  { width:'100%', padding:'18px', borderRadius:12, border:'none', background:'linear-gradient(135deg,#f59e0b,#d97706)', color:'#0a0c0f', fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:16, cursor:'pointer', boxShadow:'0 8px 28px rgba(245,158,11,0.28)', letterSpacing:'0.3px', marginTop:8, boxSizing:'border-box' },
+  primaryBtn:   { padding:'10px 20px', borderRadius:8, border:'none', background:'linear-gradient(135deg,#f59e0b,#d97706)', color:'#0a0c0f', fontWeight:700, fontSize:13, cursor:'pointer' },
+  secondaryBtn: { padding:'10px 18px', borderRadius:8, border:'1px solid rgba(255,255,255,0.12)', background:'#111418', color:'#e8e4dc', fontSize:13, fontWeight:500, cursor:'pointer' },
+  backBtn:      { display:'flex', alignItems:'center', gap:6, color:'#9ca3af', background:'none', border:'none', fontSize:13, cursor:'pointer', marginBottom:16, padding:0 },
+  progressPage: { display:'flex', alignItems:'center', justifyContent:'center', minHeight:'100vh' },
+  progressInner:{ maxWidth:560, width:'100%', textAlign:'center', padding:'0 40px' },
+  progressTitle:{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:28, letterSpacing:'-0.5px', marginBottom:10 },
+  progressSub:  { color:'#9ca3af', fontSize:13.5, marginBottom:44 },
+  progressBarWrap:{ background:'#111418', borderRadius:100, height:8, marginBottom:14, overflow:'hidden', border:'1px solid rgba(255,255,255,0.07)' },
+  progressBar:  { height:'100%', borderRadius:100, background:'linear-gradient(90deg,#f59e0b,#fbbf24)', transition:'width 0.45s ease', boxShadow:'0 0 14px rgba(245,158,11,0.5)' },
+  progressMeta: { display:'flex', justifyContent:'space-between', fontSize:12, color:'#6b7280', marginBottom:36 },
+  dots:         { display:'flex', justifyContent:'center', gap:8 },
+  dot:          { width:8, height:8, borderRadius:'50%', background:'#f59e0b', animation:'dotPulse 1.2s ease-in-out infinite alternate', opacity:0.4 },
+  resultsHeader:{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:24, flexWrap:'wrap', gap:16 },
+  statsRow:     { display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))', gap:10, marginBottom:20 },
+  statCard:     { background:'#111418', border:'1px solid rgba(255,255,255,0.07)', borderRadius:10, padding:'13px 15px' },
+  statLabel:    { fontSize:10, color:'#6b7280', marginBottom:5 },
+  statVal:      { fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:22 },
+  filters:      { display:'flex', gap:10, marginBottom:14, flexWrap:'wrap', alignItems:'center' },
+  tableWrap:    { background:'#111418', border:'1px solid rgba(255,255,255,0.07)', borderRadius:12, overflow:'hidden' },
+  table:        { width:'100%', borderCollapse:'collapse', fontSize:13 },
+  thead:        { background:'#161b22', borderBottom:'1px solid rgba(255,255,255,0.08)' },
+  th:           { padding:'11px 13px', textAlign:'left', fontWeight:600, fontSize:10.5, color:'#6b7280', letterSpacing:'0.07em', textTransform:'uppercase', whiteSpace:'nowrap' },
+  tr:           { borderBottom:'1px solid rgba(255,255,255,0.05)' },
+  td:           { padding:'11px 13px', verticalAlign:'middle' },
+  gradeTag:     { display:'inline-flex', alignItems:'center', justifyContent:'center', width:32, height:20, borderRadius:5, fontWeight:700, fontSize:11 },
+  companyName:  { overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontWeight:500, fontSize:13 },
+  link:         { color:'#6b7280', fontSize:11, textDecoration:'none' },
+  segTag:       { fontSize:11, padding:'3px 7px', borderRadius:4, background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)', color:'#9ca3af', whiteSpace:'nowrap' },
+  hiringTag:    { fontSize:11, color:'#22c55e', background:'rgba(34,197,94,0.1)', padding:'3px 7px', borderRadius:4, whiteSpace:'nowrap' },
+  tableFooter:  { padding:'13px 20px', background:'#161b22', borderTop:'1px solid rgba(255,255,255,0.07)', color:'#6b7280', fontSize:12, textAlign:'center' },
+  emptyState:   { display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:'60vh', textAlign:'center', padding:40 },
+  emptyIcon:    { fontSize:52, marginBottom:16 },
+  emptyTitle:   { fontFamily:"'Syne',sans-serif", fontWeight:700, fontSize:20, color:'#e8e4dc', marginBottom:8 },
+  emptySub:     { fontSize:14, color:'#6b7280', marginBottom:24 },
+  historyCard:  { background:'#111418', border:'1px solid rgba(255,255,255,0.07)', borderRadius:14, padding:'20px 24px', cursor:'pointer', transition:'border-color 0.15s, background 0.15s' },
+  historyCount: { fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:22, color:'#f59e0b' },
+  hotBadge:     { fontSize:11, padding:'3px 8px', borderRadius:5, background:'rgba(34,197,94,0.1)', color:'#22c55e', border:'1px solid rgba(34,197,94,0.18)' },
+  historyTag:   { fontSize:11, padding:'2px 8px', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:4, color:'#9ca3af' },
+  historyRegionTag:{ fontSize:11, padding:'2px 8px', background:'rgba(245,158,11,0.07)', border:'1px solid rgba(245,158,11,0.18)', borderRadius:4, color:'#f59e0b' },
+  downloadBtn:  { padding:'6px 14px', borderRadius:6, border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.04)', color:'#9ca3af', fontSize:12, cursor:'pointer' },
 };
 
 const globalCss = `
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-  *{box-sizing:border-box;margin:0;padding:0;}
-  body{background:#0f172a; color:#f1f5f9;}
-  @keyframes spin { to { transform: rotate(360deg); } }
-  button:active { transform: scale(0.98); }
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap');
+  *, *::before, *::after {box-sizing:border-box;margin:0;padding:0;}
+  html, body, #root { height:100%; width:100%; overflow-x:hidden; }
+  body{background:#0a0c0f;color:#e8e4dc;-webkit-font-smoothing:antialiased;}
+  ::-webkit-scrollbar{width:5px;height:5px;}
+  ::-webkit-scrollbar-track{background:#0d1117;}
+  ::-webkit-scrollbar-thumb{background:#1e2530;border-radius:3px;}
+  input:focus,textarea:focus,select:focus{outline:none;border-color:#f59e0b !important;box-shadow:0 0 0 3px rgba(245,158,11,0.1);}
+  @keyframes dotPulse{to{opacity:1;transform:scale(1.4);}}
 `;
